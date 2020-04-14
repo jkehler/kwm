@@ -75,6 +75,15 @@ int main(int argc, char *argv[]) {
 		wlr_log(WLR_ERROR, "Failed to initialize the Wayland server");
 		exit(EXIT_FAILURE);
 	}
+	setenv("WAYLAND_DISPLAY", server.socket, true);
 
-	return server_start(&server, "/usr/bin/thunar");
+	if (!server_start(&server)) {
+		goto shutdown;
+	}
+
+	server_run(&server);
+
+shutdown:
+	server_cleanup(&server);
+	return 0;
 }

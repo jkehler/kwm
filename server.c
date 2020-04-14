@@ -666,38 +666,36 @@ bool server_init(struct kwm_server *server) {
 	wl_signal_add(&server->xdg_decoration_mgr->events.new_toplevel_decoration,
 				  &server->new_xdg_decoration);
 
+	/* Add a Unix socket to the Wayland display */
+	server->socket = wl_display_add_socket_auto(server->display);
+	if (!server->socket) {
+		wlr_log(WLR_ERROR, "Unable to open wayland socket");
+		wlr_backend_destroy(server->backend);
+		return false;
+	}
 	return true;
 }
 
-int server_start(struct kwm_server *server, char *startup_cmd) {
-	/* Add a Unix socket to the Wayland display */
-	const char *socket = wl_display_add_socket_auto(server->display);
-	if (!socket) {
-		wlr_backend_destroy(server->backend);
-		return 1;
-	}
-
+bool server_start(struct kwm_server *server) {
+	wlr_log(WLR_INFO, "Starting backend on wayland display '%s'", server->socket);
 	if (!wlr_backend_start(server->backend)) {
+		wlr_log(WLR_ERROR, "Failed to start backend");
 		wlr_backend_destroy(server->backend);
-		wl_display_destroy(server->display);
 		return 1;
 	}
 
-	/* Set the WAYLAND_DISPLAY environment variable to our socket */
-	setenv("WAYLAND_DISPLAY", socket, true);
-	if (startup_cmd) {
-		if (fork() == 0) {
-			execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void *)NULL);
-		}
-	}
+	return true;
+}
 
+void server_run(struct kwm_server *server) {
 	/* Run the wayland event loop */
-	wlr_log(WLR_INFO, "Running Wayland compositor on WAYLAND_DISPLAY=%s", socket);
+	wlr_log(WLR_INFO, "Running compositor on WAYLAND_DISPLAY=%s", server->socket);
 	wl_display_run(server->display);
 
+}
+
+void server_cleanup(struct kwm_server *server) {
 	wl_display_destroy_clients(server->display);
 	wl_display_destroy(server->display);
-	wlr_backend_destroy(server->backend);
-
-	return 0;
+	// wlr_backend_destroy(server->backend);
 }
