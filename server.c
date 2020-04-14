@@ -691,7 +691,6 @@ void server_run(struct kwm_server *server) {
 	/* Run the wayland event loop */
 	wlr_log(WLR_INFO, "Running compositor on WAYLAND_DISPLAY=%s", server->socket);
 	wl_display_run(server->display);
-
 }
 
 void server_cleanup(struct kwm_server *server) {
