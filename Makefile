@@ -36,6 +36,6 @@ kwm: ${OBJ}
 	${CC} -o $@ ${OBJ} ${CFLAGS} ${LDFLAGS}
 
 clean:
-	rm -f kwm ${OBJ}
+	rm -f kwm ${OBJ} xdg-shell-protocol.h xdg-shell-protocol.c
 
 .PHONY: all options
