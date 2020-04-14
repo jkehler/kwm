@@ -1,3 +1,4 @@
 .ccls-cache/
 *.o
 xdg-shell-protocol.*
+kwm
