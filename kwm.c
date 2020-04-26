@@ -65,11 +65,31 @@ bool handle_keybinding(struct kwm_server *server, uint32_t modifiers, xkb_keysym
 	/* } */
 	/* return true; */
 
+bool init_workspaces(struct kwm_server *server) {
+	struct kwm_workspace *workspaces[9];
+	for (int i = 0; i <= 9; i++) {
+		/* server->workspaces[i] = calloc(1, sizeof(struct kwm_workspace)); */
+		/* wl_list_init(&server->workspaces[i]->views); */
+		// wlr_log(WLR_DEBUG, "Workspace %d Created: %p", i, &server->workspaces[i]);
+	}
+	/* /1* Initialize the list of workspaces. 10 in total *1/ */
+	/* wl_list_init(&server->workspaces); */
+	/* for (int i = 0; i <= 9; i++) { */
+	/* 	struct kwm_workspace *workspace = calloc(1, sizeof(struct kwm_workspace)); */
+	/* 	wl_list_init(&workspace->views); */
+	/* 	wl_list_insert(&server->workspaces, &workspace->link); */
+	/* } */
+	/* /1* Assign the workspaces to our outputs *1/ */
+	/* return true; */
+}
+
 int main(int argc, char *argv[]) {
 	/* Set our log level */
 	wlr_log_init(WLR_DEBUG, NULL);
 
 	struct kwm_server server;
+
+	init_workspaces(&server);
 
 	if (!server_init(&server)) {
 		wlr_log(WLR_ERROR, "Failed to initialize the Wayland server");

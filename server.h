@@ -31,6 +31,7 @@ struct kwm_server {
 	struct wlr_server_decoration_manager *decoration_mgr;
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_mgr;
 	struct kwm_view *grabbed_view;
+	struct kwm_workspace *grabbed_view_workspace;
 	double grab_x, grab_y;
 	int grab_width, grab_height;
 	uint32_t resize_edges;
@@ -38,7 +39,6 @@ struct kwm_server {
 	const char *socket;
 
 	struct wl_list outputs;
-	struct wl_list views;
 	struct wl_list keyboards;
 
 	struct wl_listener new_xdg_surface;
@@ -55,20 +55,21 @@ struct kwm_server {
 
 /* This struct holds the state for the connected outputs (displays) */
 struct kwm_output {
-	struct wlr_output *output;
+	struct wlr_output *wlr_output;
 	struct kwm_server *server;
 	struct timespec last_frame;
 
-	struct wl_list views;
 	struct wl_list link;
 	struct wl_listener destroy;
 	struct wl_listener frame;
+
+	struct kwm_workspace *active_workspace;
+	struct wl_list workspaces;
 };
 
 /* This struct holds the state of a view (application) */
 struct kwm_view {
 	struct kwm_server *server;
-	struct kwm_output *output;
 	struct wl_list link;
 	struct wlr_xdg_surface *xdg_surface;
 	struct wlr_xdg_toplevel_decoration_v1 *xdg_decoration;
@@ -90,6 +91,13 @@ struct kwm_keyboard {
 
 	struct wl_listener modifiers;
 	struct wl_listener key;
+};
+
+struct kwm_workspace {
+	struct wl_list link;
+
+	struct kwm_output *output;
+	struct wl_list views;
 };
 
 struct render_data {

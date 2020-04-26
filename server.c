@@ -35,8 +35,26 @@ bool view_at(struct kwm_view *view, double lx, double ly, struct wlr_surface **s
 struct kwm_view *desktop_view_at(struct kwm_server *server, double lx, double ly,
 								 struct wlr_surface **surface, double *sx, double *sy) {
 	struct kwm_view *view;
-	wl_list_for_each(view, &server->views, link) {
-		if (view_at(view, lx, ly, surface, sx, sy)) {
+	/* wl_list_for_each(view, &server->views, link) { */
+	/* 	if (view_at(view, lx, ly, surface, sx, sy)) { */
+	/* 		return view; */
+	/* 	} */
+	/* } */
+	return NULL;
+}
+
+struct kwm_view *workspace_view_at(struct kwm_workspace *workspace, double lx, double ly,
+								   struct wlr_surface **surface, double *sx, double *sy) {
+	struct kwm_view *view;
+
+	wl_list_for_each(view, &workspace->views, link) {
+
+		double ox = 0, oy = 0;
+		wlr_output_layout_output_coords(view->server->output_layout, workspace->output->wlr_output,
+										&ox, &ox);
+		ox += view->x, oy += view->y;
+
+		if (view_at(view, ox, oy, surface, sx, sy)) {
 			return view;
 		}
 	}
@@ -49,7 +67,6 @@ void focus_view(struct kwm_view *view, struct wlr_surface *surface) {
 	if (view == NULL) {
 		return;
 	}
-	wlr_log(WLR_DEBUG, "focus_view x=%d y=%d", view->x, view->y);
 	struct kwm_server *server = view->server;
 	struct wlr_seat *seat = server->seat;
 	struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
@@ -63,8 +80,8 @@ void focus_view(struct kwm_view *view, struct wlr_surface *surface) {
 	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
 
 	/* move the view to the front */
-	wl_list_remove(&view->link);
-	wl_list_insert(&server->views, &view->link);
+	// wl_list_remove(&view->link);
+	// wl_list_insert(&server->views, &view->link);
 
 	/* Activate the new surface */
 	wlr_xdg_toplevel_set_activated(view->xdg_surface, true);
@@ -86,7 +103,7 @@ void render_view(struct kwm_view *view, struct kwm_output *output, struct timesp
 	   have layout coordinates of 2000,100. We need to translate that to
 	   output-local coordinates, or (2000-1928) */
 	double ox = 0, oy = 0;
-	wlr_output_layout_output_coords(view->server->output_layout, output->output, &ox, &ox);
+	wlr_output_layout_output_coords(view->server->output_layout, output->wlr_output, &ox, &ox);
 	ox += view->x, oy += view->y;
 
 	/* Render the border for the currently focused view */
@@ -95,43 +112,45 @@ void render_view(struct kwm_view *view, struct kwm_output *output, struct timesp
 		float border_color[4] = {1.0, 0.3, 0.3, 1.0};
 
 		struct wlr_box border_top = {
-			.x = ox * output->output->scale,
-			.y = (oy - border_width) * output->output->scale,
-			.width =
-				(border_width + view->xdg_surface->surface->current.width) * output->output->scale,
-			.height = border_width * output->output->scale};
+			.x = ox * output->wlr_output->scale,
+			.y = (oy - border_width) * output->wlr_output->scale,
+			.width = (border_width + view->xdg_surface->surface->current.width) *
+					 output->wlr_output->scale,
+			.height = border_width * output->wlr_output->scale};
 		wlr_render_rect(view->server->renderer, &border_top, border_color,
-						output->output->transform_matrix);
+						output->wlr_output->transform_matrix);
 		struct wlr_box border_bottom = {
-			.x = ox * output->output->scale,
-			.y = (oy + view->xdg_surface->surface->current.height) * output->output->scale,
-			.width =
-				(border_width + view->xdg_surface->surface->current.width) * output->output->scale,
-			.height = border_width * output->output->scale};
+			.x = ox * output->wlr_output->scale,
+			.y = (oy + view->xdg_surface->surface->current.height) * output->wlr_output->scale,
+			.width = (border_width + view->xdg_surface->surface->current.width) *
+					 output->wlr_output->scale,
+			.height = border_width * output->wlr_output->scale};
 		wlr_render_rect(view->server->renderer, &border_bottom, border_color,
-						output->output->transform_matrix);
+						output->wlr_output->transform_matrix);
 		struct wlr_box border_left = {
-			.x = (ox - border_width) * output->output->scale,
-			.y = (oy - border_width) * output->output->scale,
-			.width = border_width * output->output->scale,
+			.x = (ox - border_width) * output->wlr_output->scale,
+			.y = (oy - border_width) * output->wlr_output->scale,
+			.width = border_width * output->wlr_output->scale,
 			.height = (border_width * 2 + view->xdg_surface->surface->current.height) *
-					  output->output->scale};
+					  output->wlr_output->scale};
 		wlr_render_rect(view->server->renderer, &border_left, border_color,
-						output->output->transform_matrix);
+						output->wlr_output->transform_matrix);
 		struct wlr_box border_right = {
-			.x = (ox + view->xdg_surface->surface->current.width) * output->output->scale,
-			.y = oy * output->output->scale,
-			.width = border_width * output->output->scale,
+			.x = (ox + view->xdg_surface->surface->current.width) * output->wlr_output->scale,
+			.y = oy * output->wlr_output->scale,
+			.width = border_width * output->wlr_output->scale,
 			.height = (border_width + view->xdg_surface->surface->current.height) *
-					  output->output->scale};
+					  output->wlr_output->scale};
 		wlr_render_rect(view->server->renderer, &border_right, border_color,
-						output->output->transform_matrix);
+						output->wlr_output->transform_matrix);
 	}
 
 	/* This calls the render_surface function for each surface amount the
 	   xdg_surface's toplevel and popups. */
-	struct render_data rdata = {
-		.output = output->output, .view = view, .renderer = output->server->renderer, .when = &now};
+	struct render_data rdata = {.output = output->wlr_output,
+								.view = view,
+								.renderer = output->server->renderer,
+								.when = &now};
 	wlr_xdg_surface_for_each_surface(view->xdg_surface, render_surface, &rdata);
 }
 
@@ -185,13 +204,13 @@ void handle_output_frame(struct wl_listener *listener, void *data) {
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	/* wlr_output_attach_render makes the OpenGL context current */
-	if (!wlr_output_attach_render(output->output, NULL)) {
+	if (!wlr_output_attach_render(output->wlr_output, NULL)) {
 		return;
 	}
 
 	/* The "effective" resolution can change if you rotate your outputs. */
 	int width, height;
-	wlr_output_effective_resolution(output->output, &width, &height);
+	wlr_output_effective_resolution(output->wlr_output, &width, &height);
 
 	/* Begin the renderer (calls glViewport and some other GL checks */
 	wlr_renderer_begin(renderer, width, height);
@@ -202,20 +221,26 @@ void handle_output_frame(struct wl_listener *listener, void *data) {
 
 	/* Render all of the views */
 	struct kwm_view *view;
-	wl_list_for_each_reverse(view, &output->server->views, link) { render_view(view, output, now); }
+	// wl_list_for_each_reverse(view, &output->server->views, link) { render_view(view, output,
+	// now); }
+	wl_list_for_each_reverse(view, &output->active_workspace->views, link) {
+		render_view(view, output, now);
+	}
 
 	/* If a hardware cursor is not supported then render a software cursor instead */
-	wlr_output_render_software_cursors(output->output, NULL);
+	wlr_output_render_software_cursors(output->wlr_output, NULL);
 
 	/* Conclude rendering and swap the buffers */
 	wlr_renderer_end(renderer);
-	wlr_output_commit(output->output);
+	wlr_output_commit(output->wlr_output);
 }
 
 /* This function is called whenever a new display output is attached */
 void handle_new_output(struct wl_listener *listener, void *data) {
 	struct kwm_server *server = wl_container_of(listener, server, new_output);
 	struct wlr_output *wlr_output = data;
+
+	wlr_log(WLR_DEBUG, "New output %p: %s", wlr_output, wlr_output->name);
 
 	if (!wl_list_empty(&wlr_output->modes)) {
 		struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
@@ -228,8 +253,26 @@ void handle_new_output(struct wl_listener *listener, void *data) {
 
 	/* Allocates and configures state for this output */
 	struct kwm_output *output = calloc(1, sizeof(struct kwm_output));
-	output->output = wlr_output;
+	output->wlr_output = wlr_output;
 	output->server = server;
+	wl_list_init(&output->workspaces);
+
+	struct kwm_workspace *workspace = calloc(1, sizeof(struct kwm_workspace));
+	workspace->output = output;
+	wl_list_init(&workspace->views);
+
+	/* Attach the kwm_output reference to data so we can look it up later */
+	wlr_output->data = output;
+
+	output->active_workspace = workspace;
+
+	/* Create a workspace for the new output */
+	/* Assign the output to our workspaces */
+	/* for (int i = 0; i <= 9; i++) { */
+	/* 	if (!server->workspaces[i]->output || wl_list_empty(&server->workspaces[i]->views)) { */
+	/* 		server->workspaces[i]->output = output; */
+	/* 	} */
+	/* } */
 
 	/* Sets up a listener for the frame notify event */
 	output->frame.notify = handle_output_frame;
@@ -294,11 +337,16 @@ void process_cursor_motion(struct kwm_server *server, uint32_t time) {
 	double sx, sy;
 	struct wlr_seat *seat = server->seat;
 	struct wlr_surface *surface = NULL;
-	struct kwm_view *view =
-		desktop_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+	struct wlr_output *wlr_output =
+		wlr_output_layout_output_at(server->output_layout, server->cursor->x, server->cursor->y);
+	struct kwm_output *output = wlr_output->data;
+	struct kwm_view *view = workspace_view_at(output->active_workspace, server->cursor->x,
+											  server->cursor->y, &surface, &sx, &sy);
+	/* 	desktop_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy); */
+
 	if (!view) {
 		/* If there is no view under the cursor, set the cursor image to default */
-		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
+		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "right_ptr", server->cursor);
 	}
 	if (surface) {
 		bool focus_changed = seat->pointer_state.focused_surface != surface;
@@ -318,6 +366,10 @@ void process_cursor_motion(struct kwm_server *server, uint32_t time) {
 
 /* Moves the grabbed view to the new position */
 void process_cursor_move(struct kwm_server *server, uint32_t time) {
+	struct wlr_output *wlr_output =
+		wlr_output_layout_output_at(server->output_layout, server->cursor->x, server->cursor->y);
+	struct kwm_output *output = wlr_output->data;
+
 	server->grabbed_view->x = server->cursor->x - server->grab_x;
 	server->grabbed_view->y = server->cursor->y - server->grab_y;
 }
@@ -354,8 +406,14 @@ void handle_cursor_button(struct wl_listener *listener, void *data) {
 	struct wlr_seat *seat = server->seat;
 	double sx, sy;
 	struct wlr_surface *surface;
-	struct kwm_view *view =
-		desktop_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+
+	/* struct kwm_view *view = */
+	/* 	desktop_view_at(server, server->cursor->x, server->cursor->y, &surface, &sx, &sy); */
+	struct wlr_output *wlr_output =
+		wlr_output_layout_output_at(server->output_layout, server->cursor->x, server->cursor->y);
+	struct kwm_output *output = wlr_output->data;
+	struct kwm_view *view = workspace_view_at(output->active_workspace, server->cursor->x,
+											  server->cursor->y, &surface, &sx, &sy);
 
 	// seat->keyboard_state->keyboard
 	/* Check if the mod key is being pressed */
@@ -365,17 +423,8 @@ void handle_cursor_button(struct wl_listener *listener, void *data) {
 		// server->cursor_mode = KWM_CURSOR_MOVE;
 		begin_interactive(view, KWM_CURSOR_MOVE, 0);
 		return;
-		/* if alt is held down and thsi button was pressed, intercept it as a compositor binding */
-		// for (int i = 0; i < nsyms; i++) {
-		// 	handled = handle_keybinding(server, syms[i]);
-		// }
 	}
 
-	/* if (!handled) { */
-	/* 	/1* pass it along to the client *1/ */
-	/* 	wlr_seat_set_keyboard(seat, keyboard->device); */
-	/* 	wlr_seat_keyboard_notify_key(seat, event->time_msec, event->keycode, event->state); */
-	/* } */
 	/* Notify the client with pointer focus that a button press has occurred */
 	wlr_seat_pointer_notify_button(server->seat, event->time_msec, event->button, event->state);
 
@@ -491,7 +540,9 @@ void begin_interactive(struct kwm_view *view, enum kwm_cursor_mode mode, uint32_
 		/* Deny move/resize requests from unfocused clients */
 		return;
 	}
+
 	server->grabbed_view = view;
+	server->grabbed_view_workspace = NULL;
 	server->cursor_mode = mode;
 	struct wlr_box geo_box;
 	wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
@@ -523,6 +574,7 @@ void handle_xdg_toplevel_request_resize(struct wl_listener *listener, void *data
 /* This function is called when a surface is mapped, or ready to display on-screen */
 void handle_xdg_surface_map(struct wl_listener *listener, void *data) {
 	struct kwm_view *view = wl_container_of(listener, view, map);
+
 	view->mapped = true;
 	focus_view(view, view->xdg_surface->surface);
 }
@@ -559,6 +611,13 @@ void handle_new_xdg_surface(struct wl_listener *listener, void *data) {
 		return;
 	}
 
+	wlr_log(WLR_DEBUG, "New xdg_shell toplevel title='%s' app_id='%s'",
+			xdg_surface->toplevel->title, xdg_surface->toplevel->app_id);
+
+	struct wlr_output *wlr_output =
+		wlr_output_layout_output_at(server->output_layout, server->cursor->x, server->cursor->y);
+	struct kwm_output *output = wlr_output->data;
+
 	/* Allocate a view for this surface */
 	struct kwm_view *view = calloc(1, sizeof(struct kwm_view));
 	view->server = server;
@@ -583,7 +642,8 @@ void handle_new_xdg_surface(struct wl_listener *listener, void *data) {
 	wl_signal_add(&toplevel->events.request_resize, &view->request_resize);
 
 	/* Add it to the list of views */
-	wl_list_insert(&server->views, &view->link);
+	// wl_list_insert(&server->views, &view->link);
+	wl_list_insert(&output->active_workspace->views, &view->link);
 }
 
 bool server_init(struct kwm_server *server) {
@@ -616,7 +676,7 @@ bool server_init(struct kwm_server *server) {
 
 	/* Set up the list of views and the xdg-shell. The xdg-shell is a wayland protocol
 	   which is used for application windows. */
-	wl_list_init(&server->views);
+	// wl_list_init(&server->views);
 	server->xdg_shell = wlr_xdg_shell_create(server->display);
 	server->new_xdg_surface.notify = handle_new_xdg_surface;
 	wl_signal_add(&server->xdg_shell->events.new_surface, &server->new_xdg_surface);
